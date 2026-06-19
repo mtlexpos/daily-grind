@@ -1,11 +1,19 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { coffees, getCoffee } from "@/data/coffees";
+import {
+  formatPrice,
+  getAllProductHandles,
+  getProduct,
+} from "@/lib/shopify";
 import AddToCart from "@/components/AddToCart";
 
-export function generateStaticParams() {
-  return coffees.map((coffee) => ({ slug: coffee.slug }));
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const handles = await getAllProductHandles();
+  return handles.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -14,11 +22,11 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const coffee = getCoffee(slug);
-  if (!coffee) return { title: "Coffee not found · Daily Grind" };
+  const product = await getProduct(slug);
+  if (!product) return { title: "Coffee not found · Daily Grind" };
   return {
-    title: `${coffee.name} · Daily Grind`,
-    description: coffee.notes,
+    title: `${product.title} · Daily Grind`,
+    description: product.notes ?? product.description.slice(0, 150),
   };
 }
 
@@ -28,8 +36,8 @@ export default async function CoffeePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const coffee = getCoffee(slug);
-  if (!coffee) notFound();
+  const product = await getProduct(slug);
+  if (!product) notFound();
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-16">
@@ -42,41 +50,65 @@ export default async function CoffeePage({
 
       <div className="mt-8 grid gap-12 md:grid-cols-2">
         {/* Visual */}
-        <div className="grid aspect-square place-items-center rounded-3xl bg-gradient-to-br from-amber-700/15 to-orange-600/10 text-[8rem]">
-          {coffee.emoji}
+        <div className="relative aspect-square overflow-hidden rounded-3xl bg-gradient-to-br from-amber-700/15 to-orange-600/10">
+          {product.image ? (
+            <Image
+              src={product.image.url}
+              alt={product.image.alt}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+              priority
+            />
+          ) : (
+            <div className="grid h-full place-items-center text-[8rem]">☕</div>
+          )}
         </div>
 
         {/* Details */}
         <div className="flex flex-col">
-          <span className="text-xs uppercase tracking-wide text-foreground/50">
-            {coffee.origin}
-          </span>
+          {product.origin && (
+            <span className="text-xs uppercase tracking-wide text-foreground/50">
+              {product.origin}
+            </span>
+          )}
           <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            {coffee.name}
+            {product.title}
           </h1>
 
           <div className="mt-4 flex items-center gap-3">
-            <span className="text-2xl font-semibold">${coffee.price}</span>
-            <span className="rounded-full bg-amber-700/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-              {coffee.roast} roast
+            <span className="text-2xl font-semibold">
+              {formatPrice(product.price, product.currency)}
             </span>
+            {product.roast && (
+              <span className="rounded-full bg-amber-700/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+                {product.roast} roast
+              </span>
+            )}
           </div>
 
-          <p className="mt-6 text-foreground/75">{coffee.description}</p>
+          {product.description && (
+            <p className="mt-6 whitespace-pre-line text-foreground/75">
+              {product.description}
+            </p>
+          )}
 
-          <dl className="mt-6 space-y-2 text-sm">
-            <div className="flex gap-2">
-              <dt className="w-28 shrink-0 text-foreground/50">Tasting notes</dt>
-              <dd>{coffee.notes}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-28 shrink-0 text-foreground/50">Size</dt>
-              <dd>12 oz · whole bean or ground to order</dd>
-            </div>
-          </dl>
+          {product.notes && (
+            <dl className="mt-6 space-y-2 text-sm">
+              <div className="flex gap-2">
+                <dt className="w-28 shrink-0 text-foreground/50">
+                  Tasting notes
+                </dt>
+                <dd>{product.notes}</dd>
+              </div>
+            </dl>
+          )}
 
           <div className="mt-8">
-            <AddToCart coffee={coffee} />
+            <AddToCart
+              variantId={product.variantId}
+              available={product.available}
+            />
           </div>
 
           <p className="mt-4 text-sm text-foreground/50">

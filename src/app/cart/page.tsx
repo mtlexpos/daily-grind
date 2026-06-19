@@ -1,15 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-
-const FREE_SHIPPING_THRESHOLD = 40;
+import { formatPrice } from "@/lib/shopify";
 
 export default function CartPage() {
-  const { items, updateQty, removeItem, clear, totalCount, totalPrice } =
-    useCart();
+  const { cart, pending, updateQty, removeItem, clear } = useCart();
 
-  if (items.length === 0) {
+  if (!cart || cart.lines.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Your cart is empty</h1>
@@ -26,9 +25,6 @@ export default function CartPage() {
     );
   }
 
-  const shipping = totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : 6;
-  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - totalPrice);
-
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <div className="flex items-center justify-between">
@@ -43,48 +39,63 @@ export default function CartPage() {
       </div>
 
       <ul className="mt-8 divide-y divide-amber-900/10 dark:divide-amber-100/10">
-        {items.map((item) => (
-          <li key={item.slug} className="flex items-center gap-4 py-5">
-            <div className="grid size-14 shrink-0 place-items-center rounded-xl bg-amber-700/10 text-2xl">
-              {item.emoji}
+        {cart.lines.map((line) => (
+          <li key={line.lineId} className="flex items-center gap-4 py-5">
+            <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-amber-700/10">
+              {line.image ? (
+                <Image
+                  src={line.image.url}
+                  alt={line.image.alt}
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="grid h-full place-items-center text-2xl">☕</div>
+              )}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-foreground/60">${item.price} each</p>
+              <p className="font-medium">{line.title}</p>
+              <p className="text-sm text-foreground/60">
+                {formatPrice(line.price, cart.currency)} each
+              </p>
             </div>
 
             <div className="flex items-center rounded-full border border-amber-900/15 dark:border-amber-100/15">
               <button
                 type="button"
                 aria-label="Decrease quantity"
-                onClick={() => updateQty(item.slug, item.qty - 1)}
-                className="grid size-8 place-items-center rounded-l-full transition-colors hover:bg-amber-900/[0.05] dark:hover:bg-amber-100/[0.06]"
+                disabled={pending}
+                onClick={() => updateQty(line.lineId, line.quantity - 1)}
+                className="grid size-8 place-items-center rounded-l-full transition-colors hover:bg-amber-900/[0.05] disabled:opacity-50 dark:hover:bg-amber-100/[0.06]"
               >
                 −
               </button>
               <span className="w-8 text-center text-sm font-medium">
-                {item.qty}
+                {line.quantity}
               </span>
               <button
                 type="button"
                 aria-label="Increase quantity"
-                onClick={() => updateQty(item.slug, item.qty + 1)}
-                className="grid size-8 place-items-center rounded-r-full transition-colors hover:bg-amber-900/[0.05] dark:hover:bg-amber-100/[0.06]"
+                disabled={pending}
+                onClick={() => updateQty(line.lineId, line.quantity + 1)}
+                className="grid size-8 place-items-center rounded-r-full transition-colors hover:bg-amber-900/[0.05] disabled:opacity-50 dark:hover:bg-amber-100/[0.06]"
               >
                 +
               </button>
             </div>
 
-            <div className="w-16 text-right font-semibold">
-              ${item.price * item.qty}
+            <div className="w-20 text-right font-semibold">
+              {formatPrice(line.price * line.quantity, cart.currency)}
             </div>
 
             <button
               type="button"
-              aria-label={`Remove ${item.name}`}
-              onClick={() => removeItem(item.slug)}
-              className="text-foreground/40 transition-colors hover:text-foreground"
+              aria-label={`Remove ${line.title}`}
+              disabled={pending}
+              onClick={() => removeItem(line.lineId)}
+              className="text-foreground/40 transition-colors hover:text-foreground disabled:opacity-50"
             >
               ✕
             </button>
@@ -94,32 +105,19 @@ export default function CartPage() {
 
       <div className="mt-8 rounded-2xl border border-amber-900/10 bg-amber-900/[0.03] p-6 dark:border-amber-100/10 dark:bg-amber-100/[0.04]">
         <div className="flex justify-between text-sm text-foreground/70">
-          <span>Subtotal ({totalCount} items)</span>
-          <span>${totalPrice}</span>
+          <span>Subtotal ({cart.totalQuantity} items)</span>
+          <span>{formatPrice(cart.subtotal, cart.currency)}</span>
         </div>
-        <div className="mt-2 flex justify-between text-sm text-foreground/70">
-          <span>Shipping</span>
-          <span>{shipping === 0 ? "Free" : `$${shipping}`}</span>
-        </div>
-        {remaining > 0 && (
-          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-            Add ${remaining} more for free shipping.
-          </p>
-        )}
-        <div className="mt-4 flex justify-between border-t border-amber-900/10 pt-4 text-lg font-semibold dark:border-amber-100/10">
-          <span>Total</span>
-          <span>${totalPrice + shipping}</span>
-        </div>
+        <p className="mt-2 text-xs text-foreground/50">
+          Shipping &amp; taxes calculated at checkout.
+        </p>
 
-        <button
-          type="button"
-          onClick={() =>
-            alert("Checkout isn't wired up yet — this is a demo storefront.")
-          }
-          className="mt-6 w-full rounded-full bg-amber-700 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600"
+        <a
+          href={cart.checkoutUrl}
+          className="mt-6 block w-full rounded-full bg-amber-700 px-6 py-3 text-center text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600"
         >
           Checkout
-        </button>
+        </a>
         <Link
           href="/#menu"
           className="mt-3 block text-center text-sm text-foreground/60 transition-colors hover:text-foreground"

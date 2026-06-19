@@ -4,100 +4,109 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
+  useTransition,
   type ReactNode,
 } from "react";
-
-export type CartItem = {
-  slug: string;
-  name: string;
-  price: number;
-  emoji: string;
-  qty: number;
-};
+import {
+  addLine,
+  createCart,
+  getCart,
+  removeLine,
+  updateLine,
+  type Cart,
+} from "@/lib/shopify-cart";
 
 type CartContextValue = {
-  items: CartItem[];
-  addItem: (item: Omit<CartItem, "qty">, qty?: number) => void;
-  removeItem: (slug: string) => void;
-  updateQty: (slug: string, qty: number) => void;
-  clear: () => void;
+  cart: Cart | null;
+  /** True while a cart mutation is in flight. */
+  pending: boolean;
   totalCount: number;
-  totalPrice: number;
+  addItem: (variantId: string, quantity?: number) => void;
+  updateQty: (lineId: string, quantity: number) => void;
+  removeItem: (lineId: string) => void;
+  clear: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const STORAGE_KEY = "daily-grind-cart";
+const STORAGE_KEY = "daily-grind-cart-id";
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [pending, startTransition] = useTransition();
 
-  // Load persisted cart on mount (client only). Starting empty and
-  // hydrating in an effect keeps server and client markup identical.
+  // On mount, restore the saved cart id and refetch the live cart from Shopify.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from localStorage
-      if (stored) setItems(JSON.parse(stored));
-    } catch {
-      // ignore malformed storage
-    }
+    const id = localStorage.getItem(STORAGE_KEY);
+    if (!id) return;
+    startTransition(async () => {
+      try {
+        const restored = await getCart(id);
+        if (restored) setCart(restored);
+        else localStorage.removeItem(STORAGE_KEY); // stale/expired cart
+      } catch {
+        // leave cart empty if Shopify is unreachable
+      }
+    });
   }, []);
 
-  // Persist on change.
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // ignore quota / unavailable storage
-    }
-  }, [items]);
+  // Persist the cart id whenever it changes.
+  function persist(next: Cart | null) {
+    setCart(next);
+    if (next) localStorage.setItem(STORAGE_KEY, next.id);
+    else localStorage.removeItem(STORAGE_KEY);
+  }
 
-  const addItem: CartContextValue["addItem"] = (item, qty = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.slug === item.slug);
-      if (existing) {
-        return prev.map((i) =>
-          i.slug === item.slug ? { ...i, qty: i.qty + qty } : i,
-        );
+  const addItem: CartContextValue["addItem"] = (variantId, quantity = 1) => {
+    startTransition(async () => {
+      try {
+        const next = cart
+          ? await addLine(cart.id, variantId, quantity)
+          : await createCart(variantId, quantity);
+        persist(next);
+      } catch {
+        // ignore; UI stays on previous cart state
       }
-      return [...prev, { ...item, qty }];
     });
   };
 
-  const removeItem: CartContextValue["removeItem"] = (slug) => {
-    setItems((prev) => prev.filter((i) => i.slug !== slug));
+  const updateQty: CartContextValue["updateQty"] = (lineId, quantity) => {
+    if (!cart) return;
+    startTransition(async () => {
+      try {
+        const next =
+          quantity <= 0
+            ? await removeLine(cart.id, lineId)
+            : await updateLine(cart.id, lineId, quantity);
+        persist(next);
+      } catch {
+        // ignore
+      }
+    });
   };
 
-  const updateQty: CartContextValue["updateQty"] = (slug, qty) => {
-    setItems((prev) =>
-      qty <= 0
-        ? prev.filter((i) => i.slug !== slug)
-        : prev.map((i) => (i.slug === slug ? { ...i, qty } : i)),
-    );
+  const removeItem: CartContextValue["removeItem"] = (lineId) => {
+    if (!cart) return;
+    startTransition(async () => {
+      try {
+        persist(await removeLine(cart.id, lineId));
+      } catch {
+        // ignore
+      }
+    });
   };
 
-  const clear = () => setItems([]);
-
-  const totalCount = useMemo(
-    () => items.reduce((sum, i) => sum + i.qty, 0),
-    [items],
-  );
-  const totalPrice = useMemo(
-    () => items.reduce((sum, i) => sum + i.price * i.qty, 0),
-    [items],
-  );
+  const clear = () => persist(null);
 
   const value: CartContextValue = {
-    items,
+    cart,
+    pending,
+    totalCount: cart?.totalQuantity ?? 0,
     addItem,
-    removeItem,
     updateQty,
+    removeItem,
     clear,
-    totalCount,
-    totalPrice,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -1,24 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import type { Coffee } from "@/data/coffees";
 import { useCart } from "@/context/CartContext";
 
-export default function AddToCart({ coffee }: { coffee: Coffee }) {
-  const { addItem } = useCart();
+/** Quantity stepper + add-to-cart, used on the product detail page. */
+export default function AddToCart({
+  variantId,
+  available = true,
+}: {
+  variantId: string | null;
+  available?: boolean;
+}) {
+  const { addItem, pending } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 
-  function handleAdd() {
-    addItem(
-      {
-        slug: coffee.slug,
-        name: coffee.name,
-        price: coffee.price,
-        emoji: coffee.emoji,
-      },
-      qty,
+  if (!variantId || !available) {
+    return (
+      <span className="inline-block rounded-full bg-amber-900/10 px-6 py-3 text-sm font-semibold text-foreground/50 dark:bg-amber-100/10">
+        Sold out
+      </span>
     );
+  }
+
+  function handleAdd() {
+    addItem(variantId as string, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
@@ -48,9 +54,10 @@ export default function AddToCart({ coffee }: { coffee: Coffee }) {
       <button
         type="button"
         onClick={handleAdd}
-        className="rounded-full bg-amber-700 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600"
+        disabled={pending}
+        className="rounded-full bg-amber-700 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600 disabled:opacity-60"
       >
-        {added ? "Added ✓" : `Add to cart · $${coffee.price * qty}`}
+        {added ? "Added ✓" : "Add to cart"}
       </button>
     </div>
   );
