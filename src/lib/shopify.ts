@@ -179,6 +179,28 @@ export async function getCollectionProducts(handle: string): Promise<Product[]> 
   return (data.collection?.products.nodes ?? []).map(normalizeProduct);
 }
 
+/** All products in the store (used as a fallback when no collection exists). */
+export async function getAllProducts(): Promise<Product[]> {
+  if (!isShopifyConfigured) return [];
+
+  const data = await shopifyFetch<{
+    products: { nodes: ShopifyProductNode[] };
+  }>({
+    query: /* GraphQL */ `
+      ${PRODUCT_FRAGMENT}
+      query AllProducts {
+        products(first: 50) {
+          nodes {
+            ...ProductFields
+          }
+        }
+      }
+    `,
+  });
+
+  return data.products.nodes.map(normalizeProduct);
+}
+
 /** A single product by handle, or null if missing / not configured. */
 export async function getProduct(handle: string): Promise<Product | null> {
   if (!isShopifyConfigured) return null;
