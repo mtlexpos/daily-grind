@@ -50,7 +50,7 @@ export default function AboutPage() {
       <div className="relative mt-8 aspect-[16/7] overflow-hidden rounded-3xl bg-gradient-to-br from-amber-700/15 to-orange-600/10">
         <Image
           src="/coffee-shop.jpg"
-          alt="A barista serving freshly brewed coffee at the counter"
+          alt="Pouring fresh milk into a bowl in our café kitchen"
           fill
           sizes="(max-width: 768px) 100vw, 768px"
           className="object-cover"
