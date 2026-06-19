@@ -76,7 +76,7 @@ export default function AboutPage() {
           roast.
         </p>
         <Link
-          href="/#menu"
+          href="/coffee"
           className="mt-6 inline-block rounded-full bg-amber-700 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600"
         >
           Shop our coffee

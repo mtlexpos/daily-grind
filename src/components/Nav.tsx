@@ -49,7 +49,7 @@ export default function Nav() {
             )}
           </Link>
           <Link
-            href="/#menu"
+            href="/coffee"
             className="rounded-full bg-amber-700 px-4 py-2 text-sm font-medium text-amber-50 transition-colors hover:bg-amber-600"
           >
             Shop beans

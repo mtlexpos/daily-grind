@@ -16,7 +16,7 @@ export default function CartPage() {
           Looks like you haven&apos;t added any coffee yet.
         </p>
         <Link
-          href="/#menu"
+          href="/coffee"
           className="mt-8 inline-block rounded-full bg-amber-700 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600"
         >
           Browse our coffee
@@ -119,7 +119,7 @@ export default function CartPage() {
           Checkout
         </a>
         <Link
-          href="/#menu"
+          href="/coffee"
           className="mt-3 block text-center text-sm text-foreground/60 transition-colors hover:text-foreground"
         >
           Continue shopping

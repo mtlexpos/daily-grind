@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function CTA() {
   return (
     <section id="subscription" className="border-t border-amber-900/10 dark:border-amber-100/10">
@@ -18,12 +20,12 @@ export default function CTA() {
             >
               Build my subscription
             </a>
-            <a
-              href="#menu"
+            <Link
+              href="/coffee"
               className="w-full rounded-full border border-amber-50/40 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-50/10 sm:w-auto"
             >
               Browse the coffee
-            </a>
+            </Link>
           </div>
         </div>
       </div>

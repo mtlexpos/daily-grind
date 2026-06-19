@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Hero() {
   return (
     <section className="relative overflow-hidden">
@@ -27,12 +29,12 @@ export default function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a
-            href="#menu"
+          <Link
+            href="/coffee"
             className="w-full rounded-full bg-amber-700 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-600 sm:w-auto"
           >
             Shop our coffee
-          </a>
+          </Link>
           <a
             href="#subscription"
             className="w-full rounded-full border border-amber-900/15 px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-amber-900/[0.04] dark:border-amber-100/15 dark:hover:bg-amber-100/[0.05] sm:w-auto"
