@@ -158,47 +158,57 @@ function normalizeProduct(node: ShopifyProductNode): Product {
 export async function getCollectionProducts(handle: string): Promise<Product[]> {
   if (!isShopifyConfigured) return [];
 
-  const data = await shopifyFetch<{
-    collection: { products: { nodes: ShopifyProductNode[] } } | null;
-  }>({
-    query: /* GraphQL */ `
-      ${PRODUCT_FRAGMENT}
-      query CollectionProducts($handle: String!) {
-        collection(handle: $handle) {
-          products(first: 50) {
-            nodes {
-              ...ProductFields
+  try {
+    const data = await shopifyFetch<{
+      collection: { products: { nodes: ShopifyProductNode[] } } | null;
+    }>({
+      query: /* GraphQL */ `
+        ${PRODUCT_FRAGMENT}
+        query CollectionProducts($handle: String!) {
+          collection(handle: $handle) {
+            products(first: 50) {
+              nodes {
+                ...ProductFields
+              }
             }
           }
         }
-      }
-    `,
-    variables: { handle },
-  });
+      `,
+      variables: { handle },
+    });
 
-  return (data.collection?.products.nodes ?? []).map(normalizeProduct);
+    return (data.collection?.products.nodes ?? []).map(normalizeProduct);
+  } catch (err) {
+    console.error("getCollectionProducts failed:", err);
+    return [];
+  }
 }
 
 /** All products in the store (used as a fallback when no collection exists). */
 export async function getAllProducts(): Promise<Product[]> {
   if (!isShopifyConfigured) return [];
 
-  const data = await shopifyFetch<{
-    products: { nodes: ShopifyProductNode[] };
-  }>({
-    query: /* GraphQL */ `
-      ${PRODUCT_FRAGMENT}
-      query AllProducts {
-        products(first: 50) {
-          nodes {
-            ...ProductFields
+  try {
+    const data = await shopifyFetch<{
+      products: { nodes: ShopifyProductNode[] };
+    }>({
+      query: /* GraphQL */ `
+        ${PRODUCT_FRAGMENT}
+        query AllProducts {
+          products(first: 50) {
+            nodes {
+              ...ProductFields
+            }
           }
         }
-      }
-    `,
-  });
+      `,
+    });
 
-  return data.products.nodes.map(normalizeProduct);
+    return data.products.nodes.map(normalizeProduct);
+  } catch (err) {
+    console.error("getAllProducts failed:", err);
+    return [];
+  }
 }
 
 /**
@@ -214,40 +224,50 @@ export async function getCoffeeProducts(): Promise<Product[]> {
 export async function getProduct(handle: string): Promise<Product | null> {
   if (!isShopifyConfigured) return null;
 
-  const data = await shopifyFetch<{ product: ShopifyProductNode | null }>({
-    query: /* GraphQL */ `
-      ${PRODUCT_FRAGMENT}
-      query Product($handle: String!) {
-        product(handle: $handle) {
-          ...ProductFields
+  try {
+    const data = await shopifyFetch<{ product: ShopifyProductNode | null }>({
+      query: /* GraphQL */ `
+        ${PRODUCT_FRAGMENT}
+        query Product($handle: String!) {
+          product(handle: $handle) {
+            ...ProductFields
+          }
         }
-      }
-    `,
-    variables: { handle },
-  });
+      `,
+      variables: { handle },
+    });
 
-  return data.product ? normalizeProduct(data.product) : null;
+    return data.product ? normalizeProduct(data.product) : null;
+  } catch (err) {
+    console.error("getProduct failed:", err);
+    return null;
+  }
 }
 
 /** All product handles, for generateStaticParams. */
 export async function getAllProductHandles(): Promise<string[]> {
   if (!isShopifyConfigured) return [];
 
-  const data = await shopifyFetch<{
-    products: { nodes: { handle: string }[] };
-  }>({
-    query: /* GraphQL */ `
-      query AllHandles {
-        products(first: 100) {
-          nodes {
-            handle
+  try {
+    const data = await shopifyFetch<{
+      products: { nodes: { handle: string }[] };
+    }>({
+      query: /* GraphQL */ `
+        query AllHandles {
+          products(first: 100) {
+            nodes {
+              handle
+            }
           }
         }
-      }
-    `,
-  });
+      `,
+    });
 
-  return data.products.nodes.map((n) => n.handle);
+    return data.products.nodes.map((n) => n.handle);
+  } catch (err) {
+    console.error("getAllProductHandles failed:", err);
+    return [];
+  }
 }
 
 /** Format a price for display, e.g. 18 -> "$18.00". */
