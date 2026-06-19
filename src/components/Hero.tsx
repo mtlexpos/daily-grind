@@ -1,12 +1,27 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Hero() {
   return (
     <section className="relative overflow-hidden">
-      {/* warm background glow */}
+      {/* faded coffee-shop photo backdrop */}
+      <Image
+        src="/coffee-shop.jpg"
+        alt=""
+        aria-hidden
+        fill
+        priority
+        sizes="100vw"
+        className="pointer-events-none -z-20 object-cover opacity-15 dark:opacity-[0.12]"
+      />
+      {/* warm gradient wash to keep text readable over the photo */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(180,83,9,0.20),_transparent_55%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(180,83,9,0.22),_transparent_55%)] [mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-background/40 via-background/10 to-background"
       />
 
       <div className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-32">

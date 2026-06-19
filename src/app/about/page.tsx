@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -46,8 +47,14 @@ export default function AboutPage() {
         do.
       </p>
 
-      <div className="mt-8 grid aspect-[16/7] place-items-center rounded-3xl bg-gradient-to-br from-amber-700/15 to-orange-600/10 text-6xl">
-        ☕
+      <div className="relative mt-8 aspect-[16/7] overflow-hidden rounded-3xl bg-gradient-to-br from-amber-700/15 to-orange-600/10">
+        <Image
+          src="/coffee-shop.jpg"
+          alt="A barista serving freshly brewed coffee at the counter"
+          fill
+          sizes="(max-width: 768px) 100vw, 768px"
+          className="object-cover"
+        />
       </div>
 
       <div className="mt-14 space-y-10">
