@@ -1,16 +1,8 @@
-import {
-  COFFEE_COLLECTION,
-  getAllProducts,
-  getCollectionProducts,
-} from "@/lib/shopify";
+import { getCoffeeProducts } from "@/lib/shopify";
 import ProductCard from "./ProductCard";
 
 export default async function Features() {
-  // Prefer the curated "coffee" collection; fall back to all products when
-  // that collection doesn't exist yet.
-  const collectionProducts = await getCollectionProducts(COFFEE_COLLECTION);
-  const products =
-    collectionProducts.length > 0 ? collectionProducts : await getAllProducts();
+  const products = await getCoffeeProducts();
 
   return (
     <section id="menu" className="border-t border-amber-900/10 dark:border-amber-100/10">

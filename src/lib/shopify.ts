@@ -201,6 +201,15 @@ export async function getAllProducts(): Promise<Product[]> {
   return data.products.nodes.map(normalizeProduct);
 }
 
+/**
+ * Coffee products for the menu and the /coffee page: prefers the curated
+ * "coffee" collection, falling back to all products when it's empty.
+ */
+export async function getCoffeeProducts(): Promise<Product[]> {
+  const collection = await getCollectionProducts(COFFEE_COLLECTION);
+  return collection.length > 0 ? collection : getAllProducts();
+}
+
 /** A single product by handle, or null if missing / not configured. */
 export async function getProduct(handle: string): Promise<Product | null> {
   if (!isShopifyConfigured) return null;

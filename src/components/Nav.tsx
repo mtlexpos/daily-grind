@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 
 const links = [
-  { href: "/#menu", label: "Our Coffee" },
+  { href: "/coffee", label: "Our Coffee" },
   { href: "/merch", label: "Merch" },
   { href: "/#subscription", label: "Subscriptions" },
   { href: "/about", label: "Our Story" },

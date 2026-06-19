@@ -42,7 +42,7 @@ export default async function CoffeePage({
   return (
     <div className="mx-auto max-w-5xl px-6 py-16">
       <Link
-        href="/#menu"
+        href="/coffee"
         className="text-sm text-foreground/60 transition-colors hover:text-foreground"
       >
         ← Back to all coffee
