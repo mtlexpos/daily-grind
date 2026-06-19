@@ -1,10 +1,26 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function CTA() {
   return (
     <section id="subscription" className="border-t border-amber-900/10 dark:border-amber-100/10">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-700 to-orange-600 px-8 py-16 text-center text-amber-50 sm:px-16">
+        <div className="relative overflow-hidden rounded-3xl px-8 py-16 text-center text-amber-50 sm:px-16">
+          {/* calendar backdrop — evokes scheduling your deliveries */}
+          <Image
+            src="/calendar.jpg"
+            alt=""
+            aria-hidden
+            fill
+            sizes="(max-width: 1152px) 100vw, 1152px"
+            className="object-cover"
+          />
+          {/* warm overlay keeps the brand colour and text legibility */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-br from-amber-800/90 to-orange-600/85"
+          />
+          <div className="relative">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Never run out of great coffee
           </h2>
@@ -26,6 +42,7 @@ export default function CTA() {
             >
               Browse the coffee
             </Link>
+          </div>
           </div>
         </div>
       </div>
