@@ -34,6 +34,26 @@ export default function CoffeeCarousel() {
     return () => clearInterval(id);
   }, [index, paused, go]);
 
+  // Signed distance from the active slide, wrapped to the shortest direction
+  // (so the last image sits to the left of the first, etc.).
+  const offset = (i: number) => {
+    const total = SHOTS.length;
+    let d = i - index;
+    if (d > total / 2) d -= total;
+    if (d < -total / 2) d += total;
+    return d;
+  };
+
+  // Position/scale/opacity for each slide based on its distance from center.
+  const slideStyle = (d: number) => {
+    if (d === 0) return "z-20 translate-x-0 scale-100 opacity-100";
+    if (d === -1)
+      return "z-10 -translate-x-[62%] scale-[0.8] opacity-45 cursor-pointer";
+    if (d === 1)
+      return "z-10 translate-x-[62%] scale-[0.8] opacity-45 cursor-pointer";
+    return "z-0 scale-75 opacity-0 pointer-events-none";
+  };
+
   return (
     <section className="border-t border-amber-900/10 dark:border-amber-100/10">
       <div className="mx-auto max-w-6xl px-6 py-20">
@@ -51,33 +71,44 @@ export default function CoffeeCarousel() {
         </div>
 
         <div
-          className="group relative mx-auto mt-12 aspect-[16/9] max-w-4xl overflow-hidden rounded-3xl bg-amber-900/5"
+          className="group relative mx-auto mt-12 h-[380px] max-w-4xl overflow-hidden sm:h-[460px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          {SHOTS.map((shot, i) => (
-            <div
-              key={shot.src}
-              className={`absolute inset-0 transition-opacity duration-700 ${
-                i === index ? "opacity-100" : "opacity-0"
-              }`}
-              aria-hidden={i !== index}
-            >
-              <Image
-                src={shot.src}
-                alt={shot.caption}
-                fill
-                priority={i === 0}
-                sizes="(max-width: 896px) 100vw, 896px"
-                className="object-cover"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-6">
-                <p className="text-left text-sm font-medium text-white/95 sm:text-base">
-                  {shot.caption}
-                </p>
+          {SHOTS.map((shot, i) => {
+            const d = offset(i);
+            const isCenter = d === 0;
+            return (
+              <div
+                key={shot.src}
+                className="absolute inset-0 flex items-center justify-center"
+                aria-hidden={!isCenter}
+              >
+                <div
+                  onClick={() => !isCenter && go(i)}
+                  className={`relative aspect-[4/5] h-full overflow-hidden rounded-2xl shadow-lg transition-all duration-500 ease-out ${slideStyle(
+                    d,
+                  )}`}
+                >
+                  <Image
+                    src={shot.src}
+                    alt={shot.caption}
+                    fill
+                    priority={i === 0}
+                    sizes="(max-width: 640px) 80vw, 360px"
+                    className="object-cover"
+                  />
+                  {isCenter && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-5">
+                      <p className="text-left text-sm font-medium text-white/95 sm:text-base">
+                        {shot.caption}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* prev / next */}
           <button
