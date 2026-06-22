@@ -98,13 +98,6 @@ export default function CoffeeCarousel() {
                     sizes="(max-width: 640px) 95vw, 800px"
                     className="object-cover"
                   />
-                  {isCenter && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-5">
-                      <p className="text-left text-sm font-medium text-white/95 sm:text-base">
-                        {shot.caption}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             );
