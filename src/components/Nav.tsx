@@ -6,7 +6,7 @@ import { useCart } from "@/context/CartContext";
 const links = [
   { href: "/coffee", label: "Our Coffee" },
   { href: "/merch", label: "Merch" },
-  { href: "/#subscription", label: "Subscriptions" },
+  { href: "/subscriptions", label: "Subscriptions" },
   { href: "/about", label: "Our Story" },
 ];
 

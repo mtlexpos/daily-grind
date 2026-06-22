@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getCollectionProducts, MERCH_COLLECTION } from "@/lib/shopify";
-import ProductCard from "@/components/ProductCard";
+import ProductGrid from "@/components/ProductGrid";
 
 export const revalidate = 60;
 
@@ -27,11 +27,7 @@ export default async function MerchPage() {
       </div>
 
       {products.length > 0 ? (
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <ProductGrid products={products} />
       ) : (
         <div className="mt-16 rounded-2xl border border-dashed border-amber-900/20 p-12 text-center text-foreground/60 dark:border-amber-100/20">
           <p className="text-lg font-medium">Merch coming soon 🧢</p>

@@ -30,12 +30,12 @@ export default function CTA() {
             cancel anytime.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a
-              href="#"
+            <Link
+              href="/subscriptions"
               className="w-full rounded-full bg-amber-50 px-6 py-3 text-sm font-semibold text-amber-800 transition-colors hover:bg-white sm:w-auto"
             >
               Build my subscription
-            </a>
+            </Link>
             <Link
               href="/coffee"
               className="w-full rounded-full border border-amber-50/40 px-6 py-3 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-50/10 sm:w-auto"
