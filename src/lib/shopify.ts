@@ -17,6 +17,14 @@ export const MERCH_COLLECTION = process.env.SHOPIFY_MERCH_COLLECTION ?? "merch";
 /** True only when both the store domain and token are configured. */
 export const isShopifyConfigured = Boolean(DOMAIN && TOKEN);
 
+/**
+ * Shopify-hosted customer account portal (login, orders, subscriptions).
+ * Defaults to the store's /account route; override with SHOPIFY_ACCOUNT_URL
+ * (e.g. a custom-domain or new-customer-accounts URL).
+ */
+export const accountUrl =
+  process.env.SHOPIFY_ACCOUNT_URL ?? (DOMAIN ? `https://${DOMAIN}/account` : null);
+
 export type ProductImage = { url: string; alt: string };
 
 export type Product = {

@@ -39,6 +39,12 @@ export default function Nav() {
 
         <div className="flex items-center gap-3">
           <Link
+            href="/account"
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+          >
+            Account
+          </Link>
+          <Link
             href="/cart"
             className="rounded-full bg-amber-700 px-4 py-2 text-sm font-medium text-amber-50 transition-colors hover:bg-amber-600"
           >
