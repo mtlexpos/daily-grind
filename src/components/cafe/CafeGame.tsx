@@ -1,217 +1,156 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Product } from "@/lib/shopify";
-import ProGearShelf from "./ProGearShelf";
-import { useCafeGame } from "./useCafeGame";
-import { costOf, formatBeans } from "./upgrades";
+import dynamic from "next/dynamic";
+import {
+  FIELD,
+  GOAL_STARS,
+  createInitialState,
+  step,
+  type GameState,
+  type Keys,
+} from "./engine";
 
-/** A short-lived "+N 🫘" that floats up from the brew button. */
-type Floater = { id: number; amount: number; offset: number };
+// WebGL needs the browser — load the 3D scene client-side only.
+const CafeScene = dynamic(() => import("./CafeScene"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid h-full place-items-center text-foreground/40">
+      Loading the café…
+    </div>
+  ),
+});
 
-function awaySummary(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-}
+const KEY_MAP: Record<string, keyof Keys> = {
+  w: "up",
+  arrowup: "up",
+  s: "down",
+  arrowdown: "down",
+  a: "left",
+  arrowleft: "left",
+  d: "right",
+  arrowright: "right",
+};
 
-export default function CafeGame({ products }: { products: Product[] }) {
-  const game = useCafeGame();
-  const {
-    loaded,
-    beans,
-    pulls,
-    perClick,
-    perSec,
-    owned,
-    upgrades,
-    away,
-    pull,
-    buy,
-    grant,
-    reset,
-    dismissAway,
-  } = game;
+export default function CafeGame() {
+  // `game` is the authoritative mutable state, advanced inside the rAF loop;
+  // `view` is the React-rendered snapshot pushed once per frame. Render reads
+  // only `view` so we never touch a ref during render.
+  const game = useRef<GameState>(createInitialState());
+  const keys = useRef<Keys>({ up: false, down: false, left: false, right: false });
+  const [view, setView] = useState<GameState>(() => createInitialState());
 
-  const [floaters, setFloaters] = useState<Floater[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
-  const nextId = useRef(0);
-
-  // Auto-dismiss the loyalty-bonus toast.
+  // Keyboard: track held movement keys; swallow arrow-key page scrolling.
   useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(t);
-  }, [toast]);
+    const down = (e: KeyboardEvent) => {
+      const dir = KEY_MAP[e.key.toLowerCase()];
+      if (!dir) return;
+      e.preventDefault();
+      keys.current[dir] = true;
+    };
+    const up = (e: KeyboardEvent) => {
+      const dir = KEY_MAP[e.key.toLowerCase()];
+      if (dir) keys.current[dir] = false;
+    };
+    const blur = () => {
+      keys.current = { up: false, down: false, left: false, right: false };
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", blur);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", blur);
+    };
+  }, []);
 
-  const onBrew = useCallback(() => {
-    pull();
-    const id = nextId.current++;
-    const offset = (id % 5) * 14 - 28; // spread floaters horizontally
-    setFloaters((f) => [...f, { id, amount: perClick, offset }]);
-    window.setTimeout(
-      () => setFloaters((f) => f.filter((x) => x.id !== id)),
-      900,
-    );
-  }, [pull, perClick]);
+  // Animation loop: advance the engine by real elapsed time, then re-render.
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    const tick = (ts: number) => {
+      const dt = (ts - last) / 1000;
+      last = ts;
+      step(game.current, dt, keys.current);
+      setView({ ...game.current });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
-  const onBought = useCallback(
-    (bonus: number, title: string) => {
-      grant(bonus);
-      setToast(`Added ${title} — enjoy ${formatBeans(bonus)} 🫘 on the house!`);
-    },
-    [grant],
-  );
+  const restart = useCallback(() => {
+    game.current = createInitialState();
+    setView({ ...game.current });
+  }, []);
 
-  if (!loaded) {
-    return (
-      <div className="grid place-items-center py-32 text-foreground/40">
-        Warming up the espresso machine…
-      </div>
-    );
-  }
+  const s = view;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_minmax(320px,420px)]">
-      {/* Brewing column */}
-      <section className="flex flex-col items-center rounded-3xl border border-amber-900/10 bg-amber-900/[0.02] p-8 dark:border-amber-100/10 dark:bg-amber-100/[0.03]">
-        <div className="text-center">
-          <p className="text-5xl font-bold tabular-nums sm:text-6xl">
-            {formatBeans(beans)} 🫘
-          </p>
-          <p className="mt-2 text-sm text-foreground/60">
-            {formatBeans(perClick)} per pull · {formatBeans(perSec)}/sec ·{" "}
-            {formatBeans(pulls)} pulls
-          </p>
+    <div className="mx-auto w-full max-w-4xl">
+      {/* HUD */}
+      <div className="mb-4">
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="font-medium">
+            ⭐ {s.stars} / {GOAL_STARS} stars
+          </span>
+          <span className="text-foreground/55">
+            {s.threeStars} perfect · {s.angry} stormed out
+          </span>
         </div>
-
-        <div className="relative my-10 grid place-items-center">
-          {floaters.map((f) => (
-            <span
-              key={f.id}
-              className="pointer-events-none absolute -top-2 animate-[cafe-float_0.9s_ease-out_forwards] text-lg font-bold text-amber-700 dark:text-amber-400"
-              style={{ left: `calc(50% + ${f.offset}px)` }}
-            >
-              +{formatBeans(f.amount)}
-            </span>
-          ))}
-          <button
-            type="button"
-            onClick={onBrew}
-            className="size-44 rounded-full bg-gradient-to-br from-amber-600 to-orange-700 text-7xl shadow-lg transition-transform active:scale-95 sm:size-52"
-            aria-label="Pull a shot"
-          >
-            ☕
-          </button>
+        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-amber-900/10 dark:bg-amber-100/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-600 transition-[width] duration-300"
+            style={{ width: `${Math.min(100, (s.stars / GOAL_STARS) * 100)}%` }}
+          />
         </div>
-        <p className="text-sm font-medium text-foreground/70">
-          Tap the cup to pull a shot
-        </p>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm("Reset your café? This clears all progress.")) {
-              reset();
-            }
-          }}
-          className="mt-6 text-xs text-foreground/40 underline-offset-2 hover:underline"
-        >
-          Reset café
-        </button>
-      </section>
-
-      {/* Upgrades + Pro Gear column */}
-      <div className="flex flex-col gap-8">
-        <section>
-          <h2 className="text-lg font-semibold">Upgrades</h2>
-          <p className="mt-1 text-sm text-foreground/60">
-            Spend beans to brew faster — by hand and on autopilot.
-          </p>
-          <ul className="mt-4 flex flex-col gap-2">
-            {upgrades.map((u) => {
-              const count = owned[u.id] ?? 0;
-              const price = costOf(u, count);
-              const affordable = beans >= price;
-              return (
-                <li key={u.id}>
-                  <button
-                    type="button"
-                    disabled={!affordable}
-                    onClick={() => buy(u.id)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-amber-900/10 bg-amber-900/[0.02] p-3 text-left transition-colors enabled:hover:bg-amber-900/[0.06] disabled:opacity-50 dark:border-amber-100/10 dark:bg-amber-100/[0.03] dark:enabled:hover:bg-amber-100/[0.07]"
-                  >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-amber-700/10 text-xl">
-                      {u.emoji}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="font-medium">{u.name}</span>
-                        {count > 0 && (
-                          <span className="shrink-0 text-xs text-foreground/50">
-                            ×{count}
-                          </span>
-                        )}
-                      </span>
-                      <span className="block text-xs text-foreground/55">
-                        {u.blurb}{" "}
-                        <span className="text-foreground/40">
-                          (+{u.amount} {u.kind === "click" ? "per pull" : "/sec"}
-                          )
-                        </span>
-                      </span>
-                    </span>
-                    <span
-                      className={`shrink-0 text-sm font-semibold tabular-nums ${
-                        affordable
-                          ? "text-amber-700 dark:text-amber-400"
-                          : "text-foreground/40"
-                      }`}
-                    >
-                      {formatBeans(price)} 🫘
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold">Pro Gear</h2>
-          <p className="mt-1 text-sm text-foreground/60">
-            The real thing, shipped to your door. Every order earns loyalty
-            beans.
-          </p>
-          <div className="mt-4">
-            <ProGearShelf products={products} onBought={onBought} />
-          </div>
-        </section>
       </div>
 
-      {/* Away-while-closed banner */}
-      {away && (
-        <div className="fixed inset-x-0 bottom-6 z-50 mx-auto w-fit max-w-[90vw] rounded-full border border-amber-900/10 bg-background/95 px-5 py-3 text-sm shadow-lg backdrop-blur dark:border-amber-100/10">
-          While you were away ({awaySummary(away.seconds)}) your café brewed{" "}
-          <strong className="text-amber-700 dark:text-amber-400">
-            {formatBeans(away.earned)} 🫘
-          </strong>
-          <button
-            type="button"
-            onClick={dismissAway}
-            className="ml-3 font-medium text-foreground/50 hover:text-foreground"
-          >
-            Nice ✕
-          </button>
-        </div>
-      )}
+      {/* 3D play field */}
+      <div
+        className="relative w-full overflow-hidden rounded-3xl border border-amber-900/15 shadow-inner dark:border-amber-100/15"
+        style={{ aspectRatio: `${FIELD.w} / ${FIELD.h}` }}
+      >
+        <CafeScene state={s} />
 
-      {/* Loyalty-bonus toast */}
-      {toast && (
-        <div className="fixed inset-x-0 top-20 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-amber-700 px-5 py-3 text-sm font-medium text-amber-50 shadow-lg">
-          {toast}
-        </div>
-      )}
+        {/* Win overlay */}
+        {s.status === "won" && (
+          <div className="absolute inset-0 z-20 grid place-items-center bg-amber-950/70 backdrop-blur-sm">
+            <div className="mx-4 max-w-sm rounded-3xl bg-background p-8 text-center shadow-2xl">
+              <p className="text-5xl">🏆</p>
+              <h2 className="mt-3 text-2xl font-bold">Café of the Year!</h2>
+              <p className="mt-2 text-foreground/70">
+                You earned {s.stars} stars — {s.threeStars} perfect pours and
+                only {s.angry} walkout{s.angry === 1 ? "" : "s"}.
+              </p>
+              <button
+                type="button"
+                onClick={restart}
+                className="mt-6 rounded-full bg-amber-700 px-6 py-2.5 font-medium text-amber-50 transition-colors hover:bg-amber-600"
+              >
+                Play again
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Controls help */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-foreground/60">
+        <p>
+          <span className="font-medium text-foreground/80">WASD / arrows</span>{" "}
+          to move. Grab a coffee at the counter (top of the room), then walk into
+          a waiting customer to serve.
+        </p>
+        <button
+          type="button"
+          onClick={restart}
+          className="rounded-full border border-amber-900/15 px-3 py-1 text-xs hover:bg-amber-900/5 dark:border-amber-100/15 dark:hover:bg-amber-100/5"
+        >
+          Restart
+        </button>
+      </div>
     </div>
   );
 }
