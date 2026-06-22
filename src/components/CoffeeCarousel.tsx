@@ -48,9 +48,9 @@ export default function CoffeeCarousel() {
   const slideStyle = (d: number) => {
     if (d === 0) return "z-20 translate-x-0 scale-100 opacity-100";
     if (d === -1)
-      return "z-10 -translate-x-[108%] scale-[0.8] opacity-50 cursor-pointer";
+      return "z-10 -translate-x-[88%] scale-[0.8] opacity-50 cursor-pointer";
     if (d === 1)
-      return "z-10 translate-x-[108%] scale-[0.8] opacity-50 cursor-pointer";
+      return "z-10 translate-x-[88%] scale-[0.8] opacity-50 cursor-pointer";
     return "z-0 scale-75 opacity-0 pointer-events-none";
   };
 
@@ -71,7 +71,7 @@ export default function CoffeeCarousel() {
         </div>
 
         <div
-          className="group relative mx-auto mt-12 h-[200px] w-full max-w-[1600px] overflow-hidden sm:h-[380px] lg:h-[440px]"
+          className="group relative mx-auto mt-12 h-[200px] w-full overflow-hidden sm:h-[380px] lg:h-[440px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
