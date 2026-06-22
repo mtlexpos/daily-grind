@@ -7,6 +7,7 @@ const links = [
   { href: "/coffee", label: "Our Coffee" },
   { href: "/merch", label: "Merch" },
   { href: "/subscriptions", label: "Subscriptions" },
+  { href: "/cafe", label: "Café Game" },
   { href: "/about", label: "Our Story" },
 ];
 
