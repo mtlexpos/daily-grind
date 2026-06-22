@@ -71,7 +71,7 @@ export default function CoffeeCarousel() {
         </div>
 
         <div
-          className="group relative mx-auto mt-12 h-[380px] max-w-4xl overflow-hidden sm:h-[460px]"
+          className="group relative mx-auto mt-12 h-[460px] max-w-5xl overflow-hidden sm:h-[640px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
@@ -86,7 +86,7 @@ export default function CoffeeCarousel() {
               >
                 <div
                   onClick={() => !isCenter && go(i)}
-                  className={`relative aspect-[4/5] h-full overflow-hidden rounded-2xl shadow-lg transition-all duration-500 ease-out ${slideStyle(
+                  className={`relative aspect-[3/4] h-full overflow-hidden rounded-2xl shadow-lg transition-all duration-500 ease-out ${slideStyle(
                     d,
                   )}`}
                 >
@@ -95,7 +95,7 @@ export default function CoffeeCarousel() {
                     alt={shot.caption}
                     fill
                     priority={i === 0}
-                    sizes="(max-width: 640px) 80vw, 360px"
+                    sizes="(max-width: 640px) 80vw, 480px"
                     className="object-cover"
                   />
                   {isCenter && (
