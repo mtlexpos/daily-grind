@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="mt-auto border-t border-amber-900/10 dark:border-amber-100/10">
@@ -10,15 +12,15 @@ export default function Footer() {
         </div>
         <p>© {new Date().getFullYear()} Daily Grind. Roasted with care.</p>
         <div className="flex gap-6">
-          <a href="#" className="transition-colors hover:text-foreground">
+          <Link href="/wholesale" className="transition-colors hover:text-foreground">
             Wholesale
-          </a>
-          <a href="#" className="transition-colors hover:text-foreground">
+          </Link>
+          <Link href="/shipping" className="transition-colors hover:text-foreground">
             Shipping
-          </a>
-          <a href="#" className="transition-colors hover:text-foreground">
+          </Link>
+          <Link href="/contact" className="transition-colors hover:text-foreground">
             Contact
-          </a>
+          </Link>
         </div>
       </div>
     </footer>
