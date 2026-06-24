@@ -7,18 +7,23 @@ import * as THREE from "three";
 import {
   COUNTER_BACK_Y,
   FIELD,
+  ITEM_LABEL,
   PATIENCE,
+  STATIONS,
   TABLES,
   THREE_STAR_WITHIN,
   type Customer,
   type GameState,
 } from "./engine";
 import {
-  COFFEE_CUP_DATA_URI,
-  CUP_ASPECT,
-  PERSON_ASPECT,
-  coffeeCupSvg,
+  ITEM_DATA_URI,
+  ITEM_H,
+  ITEM_W,
+  PERSON_H,
+  PERSON_W,
+  itemSvg,
   personSvg,
+  type Look,
 } from "./sprites";
 
 /**
@@ -45,8 +50,12 @@ const COUNTER_CZ = wz(COUNTER_BACK_Y / 2);
 const COUNTER_DEPTH = COUNTER_BACK_Y * SCALE;
 const BACK_Z = wz(0) - 0.1;
 
-/** Rasterise an SVG string to a canvas texture (updates once the image loads). */
-function useSvgTexture(svg: string, w = 256, h = 256): THREE.CanvasTexture {
+/**
+ * Rasterise a pixel-art SVG to a canvas texture at its NATIVE grid resolution
+ * (e.g. 16×24). NearestFilter then lets the GPU upscale it blocky, so the 8-bit
+ * pixels stay crisp at any size. Updates once the SVG image decodes.
+ */
+function useSvgTexture(svg: string, w: number, h: number): THREE.CanvasTexture {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = w;
@@ -54,11 +63,16 @@ function useSvgTexture(svg: string, w = 256, h = 256): THREE.CanvasTexture {
     const ctx = canvas.getContext("2d");
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
     const img = new Image();
     img.onload = () => {
-      ctx?.clearRect(0, 0, w, h);
-      ctx?.drawImage(img, 0, 0, w, h);
+      if (ctx) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+      }
       tex.needsUpdate = true;
     };
     img.src = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
@@ -66,24 +80,25 @@ function useSvgTexture(svg: string, w = 256, h = 256): THREE.CanvasTexture {
   }, [svg, w, h]);
 }
 
-/** A camera-facing sprite, base sitting near the floor at `position`. */
+/** A camera-facing pixel sprite, base sitting near the floor at `position`. */
 function Sprite({
   svg,
   position,
   height,
-  aspect,
+  texW,
+  texH,
 }: {
   svg: string;
   position: [number, number, number];
   height: number;
-  aspect: number;
+  texW: number;
+  texH: number;
 }) {
-  const res = 320;
-  const tex = useSvgTexture(svg, Math.round(res * aspect), res);
+  const tex = useSvgTexture(svg, texW, texH);
   return (
     <Billboard position={position}>
       <mesh>
-        <planeGeometry args={[height * aspect, height]} />
+        <planeGeometry args={[height * (texW / texH), height]} />
         <meshBasicMaterial map={tex} transparent toneMapped={false} alphaTest={0.5} />
       </mesh>
     </Billboard>
@@ -99,15 +114,18 @@ function ShadowBlob({ x, z, r = 0.42 }: { x: number; z: number; r?: number }) {
   );
 }
 
-function Table({ x, z }: { x: number; z: number }) {
+function Table({ x, z, r }: { x: number; z: number; r: number }) {
+  const h = 0.42 + r * 0.45; // bigger tables stand a touch taller
+  const legR = Math.min(0.09, r * 0.18);
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, 0.26, 0]} castShadow>
-        <cylinderGeometry args={[0.05, 0.07, 0.52, 12]} />
+      <ShadowBlob x={0} z={0} r={r * 1.05} />
+      <mesh position={[0, h / 2, 0]} castShadow>
+        <cylinderGeometry args={[legR, legR * 1.4, h, 12]} />
         <meshStandardMaterial color="#6b4a2b" />
       </mesh>
-      <mesh position={[0, 0.54, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.34, 0.34, 0.07, 24]} />
+      <mesh position={[0, h + 0.035, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[r, r, 0.07, 28]} />
         <meshStandardMaterial color="#caa472" />
       </mesh>
     </group>
@@ -117,17 +135,17 @@ function Table({ x, z }: { x: number; z: number }) {
 function CustomerView({ customer }: { customer: Customer }) {
   const t = TABLES[customer.table];
   const x = wx(t.x);
-  const z = wz(t.y) + 0.45; // sit on the camera side of the table
+  const z = wz(t.y) + t.r * SCALE + 0.28; // sit at the near edge of the table
   const angry = customer.state === "reviewing" && customer.stars === 0;
   const svg = useMemo(
-    () => personSvg({ skin: customer.skin, hair: customer.hair, shirt: customer.shirt, angry }),
-    [customer.skin, customer.hair, customer.shirt, angry],
+    () => personSvg({ ...customer.look, angry }),
+    [customer.look, angry],
   );
 
   return (
     <group>
       <ShadowBlob x={x} z={z} r={0.32} />
-      <Sprite svg={svg} position={[x, 0.62, z]} height={1.1} aspect={PERSON_ASPECT} />
+      <Sprite svg={svg} position={[x, 0.66, z]} height={1.2} texW={PERSON_W} texH={PERSON_H} />
       <Html
         position={[x, 1.5, z]}
         center
@@ -175,7 +193,15 @@ function CustomerBubble({ customer }: { customer: Customer }) {
   return (
     <div className="flex select-none flex-col items-center gap-1 rounded-2xl bg-white px-3 py-1.5 shadow ring-1 ring-black/10">
       {/* eslint-disable-next-line @next/next/no-img-element -- tiny inline SVG data-uri, not a network image */}
-      <img src={COFFEE_CUP_DATA_URI} alt="" width={26} height={26} draggable={false} />
+      <img
+        src={ITEM_DATA_URI[customer.order]}
+        alt={ITEM_LABEL[customer.order]}
+        title={ITEM_LABEL[customer.order]}
+        width={28}
+        height={28}
+        draggable={false}
+        style={{ imageRendering: "pixelated" }}
+      />
       <div className="h-2 w-16 overflow-hidden rounded-full bg-black/10">
         <div
           className={`h-full rounded-full ${inThreeStarZone ? "bg-emerald-500" : "bg-red-500"}`}
@@ -186,28 +212,33 @@ function CustomerBubble({ customer }: { customer: Customer }) {
   );
 }
 
-/** Cups sitting on the counter; an empty saucer shows while one restocks. */
-function CounterCups({ cups }: { cups: number[] }) {
-  const cupSvg = useMemo(() => coffeeCupSvg(), []);
-  const span = FLOOR_W - 2;
+/** Counter stations; each shows its item when ready, an empty mat while
+ *  restocking. The item types are grouped left→right: coffee, iced, pastry. */
+function CounterStations({ stations }: { stations: number[] }) {
+  const svgs = useMemo(
+    () => STATIONS.map((s) => itemSvg(s.item)),
+    [],
+  );
   return (
     <>
-      {cups.map((timer, i) => {
-        const x = -span / 2 + (span * i) / (cups.length - 1);
-        const ready = timer <= 0;
+      {STATIONS.map((station, i) => {
+        // counter group is at COUNTER_CZ, so position items in its local frame
+        const x = wx(station.x);
+        const ready = stations[i] <= 0;
         return (
           <group key={i}>
-            {/* saucer marks the slot */}
+            {/* mat marks the slot */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.97, 0]}>
               <circleGeometry args={[0.16, 20]} />
               <meshStandardMaterial color={ready ? "#caa472" : "#9b8a70"} />
             </mesh>
             {ready && (
               <Sprite
-                svg={cupSvg}
-                position={[x, 1.16, 0.02]}
-                height={0.34}
-                aspect={CUP_ASPECT}
+                svg={svgs[i]}
+                position={[x, 1.18, 0.02]}
+                height={0.38}
+                texW={ITEM_W}
+                texH={ITEM_H}
               />
             )}
           </group>
@@ -225,12 +256,22 @@ function CameraSetup() {
   return null;
 }
 
+const BARISTA_LOOK: Look = {
+  skin: "#f0c49c",
+  hair: "#3a2a1c",
+  hairStyle: "short",
+  hat: "none",
+  hatColor: "#ffffff",
+  shirt: "#6f4a2d",
+  pants: "#34415c",
+  glasses: false,
+  beard: false,
+  barista: true,
+};
+
 function Scene({ state }: { state: GameState }) {
   const b = state.barista;
-  const baristaSvg = useMemo(
-    () => personSvg({ skin: "#f0c49c", hair: "#3a2a1c", shirt: "#3f7d5a", barista: true }),
-    [],
-  );
+  const baristaSvg = useMemo(() => personSvg(BARISTA_LOOK), []);
 
   return (
     <>
@@ -284,12 +325,12 @@ function Scene({ state }: { state: GameState }) {
           <boxGeometry args={[FLOOR_W, 0.08, COUNTER_DEPTH + 0.08]} />
           <meshStandardMaterial color="#7a5026" />
         </mesh>
-        <CounterCups cups={state.cups} />
+        <CounterStations stations={state.stations} />
       </group>
 
       {/* Tables */}
       {TABLES.map((t, i) => (
-        <Table key={i} x={wx(t.x)} z={wz(t.y)} />
+        <Table key={i} x={wx(t.x)} z={wz(t.y)} r={t.r * SCALE} />
       ))}
 
       {/* Customers */}
@@ -301,16 +342,18 @@ function Scene({ state }: { state: GameState }) {
       <ShadowBlob x={wx(b.x)} z={wz(b.y)} />
       <Sprite
         svg={baristaSvg}
-        position={[wx(b.x), 0.66, wz(b.y)]}
-        height={1.2}
-        aspect={PERSON_ASPECT}
+        position={[wx(b.x), 0.72, wz(b.y)]}
+        height={1.3}
+        texW={PERSON_W}
+        texH={PERSON_H}
       />
-      {b.carrying && (
+      {b.carry && (
         <Sprite
-          svg={coffeeCupSvg()}
-          position={[wx(b.x) + 0.34, 0.5, wz(b.y)]}
-          height={0.4}
-          aspect={CUP_ASPECT}
+          svg={itemSvg(b.carry)}
+          position={[wx(b.x) + 0.34, 0.52, wz(b.y)]}
+          height={0.46}
+          texW={ITEM_W}
+          texH={ITEM_H}
         />
       )}
     </>

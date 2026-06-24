@@ -140,8 +140,11 @@ export default function CafeGame() {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-foreground/60">
         <p>
           <span className="font-medium text-foreground/80">WASD / arrows</span>{" "}
-          to move. Grab a coffee at the counter (top of the room), then walk into
-          a waiting customer to serve.
+          to move. Each customer wants a specific order — hot coffee, iced
+          coffee, or a pastry (shown in their bubble). Grab the matching item
+          from its counter station (coffee · iced · pastry, left to right), then
+          walk into that customer to serve. Wrong item? Walk to another station
+          to swap it.
         </p>
         <button
           type="button"

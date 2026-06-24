@@ -14,7 +14,7 @@
 
 export const FIELD = { w: 1000, h: 620 };
 
-/** Counter occupies the back strip; standing in it (y <= this) grabs a coffee. */
+/** Counter occupies the back strip; standing in it (y <= this) grabs an item. */
 export const COUNTER_BACK_Y = 96;
 /** Barista half-size, used to clamp it inside the field. */
 export const BARISTA_R = 34;
@@ -32,25 +32,85 @@ export const REVIEW_LINGER = 1.6;
 
 export const GOAL_STARS = 25;
 
-/** Fresh cups sitting on the counter, and how long a taken one takes to refill. */
-export const CUP_SLOTS = 5;
-export const CUP_RESTOCK = 4;
+/** The three things a customer can order. */
+export type ItemType = "coffee" | "iced" | "pastry";
+export const ITEMS: ItemType[] = ["coffee", "iced", "pastry"];
+export const ITEM_LABEL: Record<ItemType, string> = {
+  coffee: "Hot coffee",
+  iced: "Iced coffee",
+  pastry: "Pastry",
+};
+
+/** Seconds a station takes to restock after its item is grabbed. */
+export const STATION_RESTOCK = 4;
+
+/** Counter stations, grouped left→right: coffee, iced, pastry. The barista
+ * grabs from the ready station nearest its x, so you walk to the item you
+ * need; standing at a station with a different item in hand swaps it. */
+export const STATIONS: { item: ItemType; x: number }[] = [
+  { item: "coffee", x: 150 },
+  { item: "coffee", x: 280 },
+  { item: "iced", x: 430 },
+  { item: "iced", x: 560 },
+  { item: "pastry", x: 710 },
+  { item: "pastry", x: 840 },
+];
 
 const SPAWN_MIN = 2.2;
 const SPAWN_MAX = 4.0;
 const FIRST_SPAWN = 0.8;
 
-/** Six tables: 3 columns × 2 rows, in front of the counter. */
-export const TABLES: { x: number; y: number }[] = [0, 1, 2, 3, 4, 5].map((i) => {
+export type Table = { x: number; y: number; r: number };
+
+/** Six tables: 3 columns × 2 rows, in front of the counter. Each has its own
+ * radius — used both for drawing and as the solid collision footprint. */
+const TABLE_RADII = [46, 32, 40, 52, 34, 44];
+export const TABLES: Table[] = [0, 1, 2, 3, 4, 5].map((i) => {
   const col = i % 3;
   const row = Math.floor(i / 3);
-  return { x: 200 + col * 300, y: 235 + row * 210 };
+  return { x: 200 + col * 300, y: 235 + row * 210, r: TABLE_RADII[i] };
 });
 
-// Sprite palettes — picked per customer for visual variety.
+// Pixel-art palettes — picked per customer for visual variety.
 const SKINS = ["#f6cda6", "#e9b487", "#cf9560", "#a96f3e", "#7c4a24"];
-const HAIRS = ["#241a12", "#5a3a1f", "#8a5a2b", "#c9a24b", "#d9d2c4", "#3b3b3b"];
-const SHIRTS = ["#c0552f", "#2f6dc0", "#2fa05a", "#8e54b0", "#dca12f", "#d24f7a", "#359c9c"];
+const HAIRS = ["#241a12", "#5a3a1f", "#8a5a2b", "#c9a24b", "#d9d2c4", "#3b3b3b", "#b8432e", "#2f8a4e", "#7d3fb0", "#e85aa0"];
+const SHIRTS = ["#c0552f", "#2f6dc0", "#2fa05a", "#8e54b0", "#dca12f", "#d24f7a", "#359c9c", "#444a55", "#d8d2c4"];
+const PANTS = ["#34415c", "#2b2b30", "#5a4632", "#3c5a3c", "#6b6b72", "#7a4a2c"];
+const HAT_COLORS = ["#3a3a40", "#7d3fb0", "#2f6dc0", "#b8432e", "#2f8a4e", "#222226", "#d8b23a"];
+
+export type HairStyle = "short" | "spiky" | "long" | "afro";
+export type HatStyle = "none" | "beanie" | "fedora" | "cap";
+
+/** Everything needed to draw a pixel-art character. */
+export type Appearance = {
+  skin: string;
+  hair: string;
+  hairStyle: HairStyle;
+  hat: HatStyle;
+  hatColor: string;
+  shirt: string;
+  pants: string;
+  glasses: boolean;
+  beard: boolean;
+};
+
+const HAIR_STYLES: HairStyle[] = ["short", "spiky", "long", "afro"];
+// Weighted so most customers are hatless and you can read their hair.
+const HATS: HatStyle[] = ["none", "none", "none", "none", "beanie", "fedora", "cap"];
+
+function randomLook(): Appearance {
+  return {
+    skin: pick(SKINS),
+    hair: pick(HAIRS),
+    hairStyle: pick(HAIR_STYLES),
+    hat: pick(HATS),
+    hatColor: pick(HAT_COLORS),
+    shirt: pick(SHIRTS),
+    pants: pick(PANTS),
+    glasses: Math.random() < 0.25,
+    beard: Math.random() < 0.3,
+  };
+}
 
 export type CustomerState = "waiting" | "reviewing";
 
@@ -64,10 +124,10 @@ export type Customer = {
   stars: number;
   /** Remaining linger time while the review bubble shows. */
   linger: number;
-  // Appearance.
-  skin: string;
-  hair: string;
-  shirt: string;
+  /** What this customer ordered — must be served the matching item. */
+  order: ItemType;
+  /** Pixel-art appearance, fixed for this customer's visit. */
+  look: Appearance;
 };
 
 export type GameState = {
@@ -77,11 +137,12 @@ export type GameState = {
   threeStars: number;
   angry: number;
   elapsed: number;
-  barista: { x: number; y: number; carrying: boolean };
+  /** `carry` is the item currently in hand, or null when empty-handed. */
+  barista: { x: number; y: number; carry: ItemType | null };
   customers: Customer[];
   occupied: boolean[]; // per table
-  /** Per cup slot: 0 = ready on the counter, >0 = seconds until restocked. */
-  cups: number[];
+  /** Per station (parallel to STATIONS): 0 = ready, >0 = seconds to restock. */
+  stations: number[];
   spawnTimer: number;
   seq: number;
 };
@@ -101,10 +162,10 @@ export function createInitialState(): GameState {
     threeStars: 0,
     angry: 0,
     elapsed: 0,
-    barista: { x: FIELD.w / 2, y: FIELD.h - 60, carrying: false },
+    barista: { x: FIELD.w / 2, y: FIELD.h - 60, carry: null },
     customers: [],
     occupied: [false, false, false, false, false, false],
-    cups: new Array(CUP_SLOTS).fill(0),
+    stations: new Array(STATIONS.length).fill(0),
     spawnTimer: FIRST_SPAWN,
     seq: 1,
   };
@@ -128,9 +189,9 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
   const d = Math.min(dt, 0.05); // clamp to avoid tunnelling on long frames
   state.elapsed += d;
 
-  // — Restock cups over time —
-  for (let i = 0; i < state.cups.length; i++) {
-    if (state.cups[i] > 0) state.cups[i] = Math.max(0, state.cups[i] - d);
+  // — Restock counter stations over time —
+  for (let i = 0; i < state.stations.length; i++) {
+    if (state.stations[i] > 0) state.stations[i] = Math.max(0, state.stations[i] - d);
   }
 
   // — Move the barista (normalised so diagonals aren't faster) —
@@ -145,12 +206,46 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
     b.y = Math.min(FIELD.h - BARISTA_R, Math.max(BARISTA_R, b.y + vy * BARISTA_SPEED * d));
   }
 
-  // — Grab a ready cup when standing at the counter empty-handed —
-  if (!state.barista.carrying && state.barista.y <= COUNTER_BACK_Y) {
-    const slot = state.cups.findIndex((t) => t <= 0);
-    if (slot >= 0) {
-      state.cups[slot] = CUP_RESTOCK; // cup leaves the counter, starts refilling
-      state.barista.carrying = true;
+  // — Tables are solid: push the barista out of any it overlaps (circle vs
+  //   circle), which also lets it slide along the edges instead of stopping. —
+  const b = state.barista;
+  for (const t of TABLES) {
+    const minDist = BARISTA_R + t.r;
+    let dx = b.x - t.x;
+    let dy = b.y - t.y;
+    let dd = Math.hypot(dx, dy);
+    if (dd < minDist) {
+      if (dd === 0) {
+        dx = 0;
+        dy = -1;
+        dd = 1;
+      }
+      const push = (minDist - dd) / dd;
+      b.x += dx * push;
+      b.y += dy * push;
+    }
+  }
+  b.x = Math.min(FIELD.w - BARISTA_R, Math.max(BARISTA_R, b.x));
+  b.y = Math.min(FIELD.h - BARISTA_R, Math.max(BARISTA_R, b.y));
+
+  // — At the counter, pick up from the ready station nearest the barista's x.
+  //   Walking to a station takes that item; if you're already carrying a
+  //   different item it swaps (so you can fix a wrong grab). Standing at a
+  //   station that matches what you hold is a no-op (no thrashing/restock). —
+  if (state.barista.y <= COUNTER_BACK_Y) {
+    let slot = -1;
+    let bestDx = Infinity;
+    for (let i = 0; i < state.stations.length; i++) {
+      if (state.stations[i] > 0) continue; // still restocking
+      const dx = Math.abs(STATIONS[i].x - state.barista.x);
+      if (dx < bestDx) {
+        bestDx = dx;
+        slot = i;
+      }
+    }
+    if (slot >= 0 && state.barista.carry !== STATIONS[slot].item) {
+      state.barista.carry = STATIONS[slot].item; // item leaves the counter
+      state.stations[slot] = STATION_RESTOCK; // and starts restocking
     }
   }
 
@@ -169,12 +264,14 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
     }
   }
 
-  // — Serve the nearest reachable waiting customer if carrying a coffee —
-  if (state.barista.carrying) {
+  // — Serve the nearest reachable waiting customer whose order matches the
+  //   item in hand. Carrying the wrong item won't serve them — go swap it. —
+  if (state.barista.carry) {
     let best: Customer | null = null;
     let bestDist = SERVE_RADIUS;
     for (const c of state.customers) {
       if (c.state !== "waiting") continue;
+      if (c.order !== state.barista.carry) continue;
       const t = TABLES[c.table];
       const dd = dist(state.barista.x, state.barista.y, t.x, t.y);
       if (dd <= bestDist) {
@@ -187,7 +284,7 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
       best.state = "reviewing";
       best.stars = stars;
       best.linger = REVIEW_LINGER;
-      state.barista.carrying = false;
+      state.barista.carry = null;
       state.stars += stars;
       state.served += 1;
       if (stars === 3) state.threeStars += 1;
@@ -223,9 +320,8 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
         wait: 0,
         stars: 0,
         linger: 0,
-        skin: pick(SKINS),
-        hair: pick(HAIRS),
-        shirt: pick(SHIRTS),
+        order: pick(ITEMS),
+        look: randomLook(),
       });
       state.spawnTimer = SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
     } else {
