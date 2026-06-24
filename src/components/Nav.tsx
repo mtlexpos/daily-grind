@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 
@@ -17,11 +18,15 @@ export default function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-amber-900/10 bg-background/80 backdrop-blur-md dark:border-amber-100/10">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span className="grid size-7 place-items-center rounded-full bg-amber-700 text-sm">
-            ☕
-          </span>
-          Daily Grind
+        <Link href="/" className="flex items-center" aria-label="The Daily Grind — home">
+          <Image
+            src="/logo.png"
+            alt="The Daily Grind"
+            width={754}
+            height={247}
+            priority
+            className="h-9 w-auto dark:brightness-0 dark:invert"
+          />
         </Link>
 
         <ul className="hidden items-center gap-8 text-sm text-foreground/70 md:flex">
