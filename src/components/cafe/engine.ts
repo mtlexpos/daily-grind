@@ -62,13 +62,14 @@ const FIRST_SPAWN = 0.8;
 
 export type Table = { x: number; y: number; r: number };
 
-/** Six tables: 3 columns × 2 rows, in front of the counter. Each has its own
- * radius — used both for drawing and as the solid collision footprint. */
-const TABLE_RADII = [46, 32, 40, 52, 34, 44];
-export const TABLES: Table[] = [0, 1, 2, 3, 4, 5].map((i) => {
-  const col = i % 3;
-  const row = Math.floor(i / 3);
-  return { x: 200 + col * 300, y: 235 + row * 210, r: TABLE_RADII[i] };
+/** Ten tables: 5 columns × 2 rows, in front of the counter. Each has its own
+ * radius — used both for drawing and as the solid collision footprint. Radii
+ * are kept moderate so the barista can always slip between adjacent tables. */
+const TABLE_RADII = [44, 34, 42, 36, 46, 40, 34, 44, 38, 42];
+export const TABLES: Table[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => {
+  const col = i % 5;
+  const row = Math.floor(i / 5);
+  return { x: 130 + col * 185, y: 235 + row * 210, r: TABLE_RADII[i] };
 });
 
 // Pixel-art palettes — picked per customer for visual variety.
@@ -164,7 +165,7 @@ export function createInitialState(): GameState {
     elapsed: 0,
     barista: { x: FIELD.w / 2, y: FIELD.h - 60, carry: null },
     customers: [],
-    occupied: [false, false, false, false, false, false],
+    occupied: new Array(TABLES.length).fill(false),
     stations: new Array(STATIONS.length).fill(0),
     spawnTimer: FIRST_SPAWN,
     seq: 1,
