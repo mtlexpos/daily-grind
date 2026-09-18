@@ -14,8 +14,13 @@
 
 export const FIELD = { w: 1000, h: 620 };
 
-/** Counter occupies the back strip; standing in it (y <= this) grabs an item. */
+/** Front edge of the counter. The barista stays in front of it so the sprite
+ * never disappears into the counter geometry. */
 export const COUNTER_BACK_Y = 96;
+/** Maximum y position for a pickup interaction in front of the counter. */
+export const COUNTER_PICKUP_Y = 150;
+/** Horizontal reach required to select one specific station. */
+export const STATION_REACH = 42;
 /** Barista half-size, used to clamp it inside the field. */
 export const BARISTA_R = 34;
 export const BARISTA_SPEED = 400; // logical units / second
@@ -204,7 +209,10 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
     vy /= m;
     const b = state.barista;
     b.x = Math.min(FIELD.w - BARISTA_R, Math.max(BARISTA_R, b.x + vx * BARISTA_SPEED * d));
-    b.y = Math.min(FIELD.h - BARISTA_R, Math.max(BARISTA_R, b.y + vy * BARISTA_SPEED * d));
+    b.y = Math.min(
+      FIELD.h - BARISTA_R,
+      Math.max(COUNTER_PICKUP_Y, b.y + vy * BARISTA_SPEED * d),
+    );
   }
 
   // — Tables are solid: push the barista out of any it overlaps (circle vs
@@ -227,26 +235,20 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
     }
   }
   b.x = Math.min(FIELD.w - BARISTA_R, Math.max(BARISTA_R, b.x));
-  b.y = Math.min(FIELD.h - BARISTA_R, Math.max(BARISTA_R, b.y));
+  b.x = Math.min(FIELD.w - BARISTA_R, Math.max(BARISTA_R, b.x));
+  b.y = Math.min(FIELD.h - BARISTA_R, Math.max(COUNTER_PICKUP_Y, b.y));
 
-  // — At the counter, pick up from the ready station nearest the barista's x.
-  //   Walking to a station takes that item; if you're already carrying a
-  //   different item it swaps (so you can fix a wrong grab). Standing at a
-  //   station that matches what you hold is a no-op (no thrashing/restock). —
-  if (state.barista.y <= COUNTER_BACK_Y) {
-    let slot = -1;
-    let bestDx = Infinity;
-    for (let i = 0; i < state.stations.length; i++) {
-      if (state.stations[i] > 0) continue; // still restocking
-      const dx = Math.abs(STATIONS[i].x - state.barista.x);
-      if (dx < bestDx) {
-        bestDx = dx;
-        slot = i;
-      }
-    }
+  // — Pick up only from the station whose clearly marked zone the barista is
+  // standing in. This prevents a halfway-between-stations grab. —
+  if (state.barista.y <= COUNTER_PICKUP_Y) {
+    const slot = STATIONS.findIndex(
+      (station, i) =>
+        state.stations[i] <= 0 &&
+        Math.abs(station.x - state.barista.x) <= STATION_REACH,
+    );
     if (slot >= 0 && state.barista.carry !== STATIONS[slot].item) {
-      state.barista.carry = STATIONS[slot].item; // item leaves the counter
-      state.stations[slot] = STATION_RESTOCK; // and starts restocking
+      state.barista.carry = STATIONS[slot].item;
+      state.stations[slot] = STATION_RESTOCK;
     }
   }
 

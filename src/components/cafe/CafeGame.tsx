@@ -124,6 +124,17 @@ export default function CafeGame() {
                 You earned {s.stars} stars — {s.threeStars} perfect pours and
                 only {s.angry} walkout{s.angry === 1 ? "" : "s"}.
               </p>
+              <div className="mt-5 rounded-2xl border-2 border-dashed border-amber-500/60 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                  Your reward
+                </p>
+                <p className="mt-1 text-lg font-black tracking-widest text-amber-950 dark:text-amber-100">
+                  RUSH15
+                </p>
+                <p className="mt-1 text-xs text-foreground/60">
+                  15% off your next Daily Grind order
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={restart}
