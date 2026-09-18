@@ -74,7 +74,7 @@ const TABLE_RADII = [44, 34, 42, 36, 46, 40, 34, 44, 38, 42];
 export const TABLES: Table[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => {
   const col = i % 5;
   const row = Math.floor(i / 5);
-  return { x: 130 + col * 185, y: 235 + row * 210, r: TABLE_RADII[i] };
+  return { x: 130 + col * 185, y: 285 + row * 210, r: TABLE_RADII[i] };
 });
 
 // Pixel-art palettes — picked per customer for visual variety.
