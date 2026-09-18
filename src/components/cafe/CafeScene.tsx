@@ -6,6 +6,7 @@ import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import {
   COUNTER_BACK_Y,
+  DUMP_ZONE,
   FIELD,
   ITEM_LABEL,
   PATIENCE,
@@ -214,6 +215,28 @@ function CustomerBubble({ customer }: { customer: Customer }) {
 
 /** Counter stations; each shows its item when ready, an empty mat while
  *  restocking. The item types are grouped left→right: coffee, iced, pastry. */
+function DiscardBin() {
+  const x = wx(DUMP_ZONE.x);
+  const z = wz(DUMP_ZONE.y);
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.22, 0]} castShadow>
+        <boxGeometry args={[0.72, 0.44, 0.62]} />
+        <meshStandardMaterial color="#315b56" />
+      </mesh>
+      <mesh position={[0, 0.46, 0]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[0.82, 0.08, 0.7]} />
+        <meshStandardMaterial color="#1f3d3a" />
+      </mesh>
+      <Html position={[0, 0.78, 0]} center distanceFactor={8} pointerEvents="none">
+        <div className="rounded bg-[#1f3d3a] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-100 shadow">
+          Discard
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 function CounterStations({ stations }: { stations: number[] }) {
   const svgs = useMemo(
     () => STATIONS.map((s) => itemSvg(s.item)),
@@ -327,6 +350,7 @@ function Scene({ state }: { state: GameState }) {
         </mesh>
         <CounterStations stations={state.stations} />
       </group>
+      <DiscardBin />
 
       {/* Tables */}
       {TABLES.map((t, i) => (

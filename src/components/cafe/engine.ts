@@ -21,6 +21,8 @@ export const COUNTER_BACK_Y = 96;
 export const COUNTER_PICKUP_Y = 150;
 /** Horizontal reach required to select one specific station. */
 export const STATION_REACH = 42;
+/** Walking into this clearly marked bin discards the item currently carried. */
+export const DUMP_ZONE = { x: 930, y: 120, radius: 48 };
 /** Barista half-size, used to clamp it inside the field. */
 export const BARISTA_R = 34;
 export const BARISTA_SPEED = 400; // logical units / second
@@ -238,9 +240,18 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
   b.x = Math.min(FIELD.w - BARISTA_R, Math.max(BARISTA_R, b.x));
   b.y = Math.min(FIELD.h - BARISTA_R, Math.max(COUNTER_PICKUP_Y, b.y));
 
+  // — The discard bin is an explicit reset point for mistakes. It is checked
+  // before station pickup so walking to the far right never swaps an item. —
+  const atDumpZone =
+    state.barista.carry !== null &&
+    dist(state.barista.x, state.barista.y, DUMP_ZONE.x, DUMP_ZONE.y) <= DUMP_ZONE.radius;
+  if (atDumpZone) {
+    state.barista.carry = null;
+  }
+
   // — Pick up only from the station whose clearly marked zone the barista is
   // standing in. This prevents a halfway-between-stations grab. —
-  if (state.barista.y <= COUNTER_PICKUP_Y) {
+  if (!atDumpZone && state.barista.y <= COUNTER_PICKUP_Y) {
     const slot = STATIONS.findIndex(
       (station, i) =>
         state.stations[i] <= 0 &&

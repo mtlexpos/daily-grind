@@ -154,8 +154,8 @@ export default function CafeGame() {
           to move. Each customer wants a specific order — hot coffee, iced
           coffee, or a pastry (shown in their bubble). Grab the matching item
           from its counter station (coffee · iced · pastry, left to right), then
-          walk into that customer to serve. Wrong item? Walk to another station
-          to swap it.
+          walk into that customer to serve. Wrong item? Walk to the marked discard
+          bin on the far right of the counter to clear your hands.
         </p>
         <button
           type="button"
