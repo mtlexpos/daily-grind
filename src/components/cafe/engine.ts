@@ -52,8 +52,8 @@ export const ITEM_LABEL: Record<ItemType, string> = {
 export const STATION_RESTOCK = 4;
 
 /** Counter stations, grouped left→right: coffee, iced, pastry. The barista
- * grabs from the ready station nearest its x, so you walk to the item you
- * need; standing at a station with a different item in hand swaps it. */
+ * can only pick up a new item while empty-handed. Discard the current item
+ * first if you need to change orders. */
 export const STATIONS: { item: ItemType; x: number }[] = [
   { item: "coffee", x: 150 },
   { item: "coffee", x: 280 },
@@ -251,7 +251,7 @@ export function step(state: GameState, dt: number, keys: Keys): GameState {
 
   // — Pick up only from the station whose clearly marked zone the barista is
   // standing in. This prevents a halfway-between-stations grab. —
-  if (!atDumpZone && state.barista.y <= COUNTER_PICKUP_Y) {
+  if (!atDumpZone && state.barista.carry === null && state.barista.y <= COUNTER_PICKUP_Y) {
     const slot = STATIONS.findIndex(
       (station, i) =>
         state.stations[i] <= 0 &&
