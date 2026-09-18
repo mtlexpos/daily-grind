@@ -22,7 +22,7 @@ export const COUNTER_PICKUP_Y = 150;
 /** Horizontal reach required to select one specific station. */
 export const STATION_REACH = 42;
 /** Walking into this clearly marked bin discards the item currently carried. */
-export const DUMP_ZONE = { x: 930, y: 120, radius: 48 };
+export const DUMP_ZONE = { x: 960, y: 120, radius: 42 };
 /** Barista half-size, used to clamp it inside the field. */
 export const BARISTA_R = 34;
 export const BARISTA_SPEED = 400; // logical units / second
