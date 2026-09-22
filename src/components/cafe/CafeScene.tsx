@@ -242,6 +242,7 @@ function CounterStations({ stations }: { stations: number[] }) {
     () => STATIONS.map((s) => itemSvg(s.item)),
     [],
   );
+
   return (
     <>
       {STATIONS.map((station, i) => {
@@ -268,6 +269,43 @@ function CounterStations({ stations }: { stations: number[] }) {
         );
       })}
     </>
+  );
+}
+
+const BARTENDER_LOOK: Look = {
+  skin: "#cf9560",
+  hair: "#241a12",
+  hairStyle: "short",
+  hat: "fedora",
+  hatColor: "#caa472",
+  shirt: "#2f6dc0",
+  pants: "#34415c",
+  glasses: false,
+  beard: true,
+  barista: true,
+};
+
+function Bartender({ elapsed }: { elapsed: number }) {
+  const bartenderSvg = useMemo(() => personSvg(BARTENDER_LOOK), []);
+  const sway = Math.sin(elapsed * 1.35) * 0.55;
+  const x = wx(500) + sway;
+  const z = wz(58);
+
+  return (
+    <group>
+      <ShadowBlob x={x} z={z} r={0.3} />
+      <Sprite
+        svg={bartenderSvg}
+        position={[x, 1.18, z]}
+        height={1.24}
+        texW={PERSON_W}
+        texH={PERSON_H}
+      />
+      <mesh position={[x + 0.18, 1.06, z + 0.04]}>
+        <boxGeometry args={[0.09, 0.09, 0.09]} />
+        <meshStandardMaterial color="#f3eee2" />
+      </mesh>
+    </group>
   );
 }
 
@@ -339,6 +377,7 @@ function Scene({ state }: { state: GameState }) {
       </mesh>
 
       {/* Counter (against the back wall) */}
+      <Bartender elapsed={state.elapsed} />
       <group position={[0, 0, COUNTER_CZ]}>
         <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
           <boxGeometry args={[FLOOR_W, 0.9, COUNTER_DEPTH]} />
